@@ -26,6 +26,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHttpRequest;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ActionRunnable;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
@@ -38,6 +39,7 @@ import org.elasticsearch.transport.TransportService;
 import java.security.PrivilegedExceptionAction;
 
 import static org.elasticsearch.ingest.bano.ClientSecurityManager.doPrivilegedException;
+import static org.elasticsearch.threadpool.ThreadPool.Names.MANAGEMENT;
 
 public class BanoStatusTransportAction extends HandledTransportAction<BanoStatusRequest, BanoStatusResponse> {
 
@@ -52,22 +54,27 @@ public class BanoStatusTransportAction extends HandledTransportAction<BanoStatus
     protected void doExecute(BanoStatusRequest request, ActionListener<BanoStatusResponse> listener) {
         BanoStatusResponse response = new BanoStatusResponse();
 
-        logger.error("Inside prepareRequest");
-        try (CloseableHttpClient HTTP_CLIENT = HttpClientBuilder.create().build()) {
-            logger.error("Client is built");
+        threadPool.executor(MANAGEMENT).execute(new ActionRunnable(listener) {
+            @Override
+            protected void doRun() throws Exception {
+                logger.error("Inside prepareRequest");
+                try (CloseableHttpClient HTTP_CLIENT = HttpClientBuilder.create().build()) {
+                    logger.error("Client is built");
 
-            doPrivilegedException((PrivilegedExceptionAction<HttpResponse>) () -> {
-                logger.error("Executing request");
-                CloseableHttpResponse httpResponse = HTTP_CLIENT.execute(new HttpHost("127.0.0.1", 9200), new BasicHttpRequest("GET", "/"));
-                logger.error("Request executed");
-                return httpResponse;
-            });
+                    doPrivilegedException((PrivilegedExceptionAction<HttpResponse>) () -> {
+                        logger.error("Executing request");
+                        CloseableHttpResponse httpResponse = HTTP_CLIENT.execute(new HttpHost("127.0.0.1", 9200), new BasicHttpRequest("GET", "/"));
+                        logger.error("Request executed");
+                        return httpResponse;
+                    });
 
-            response.setMessage("foo");
-            listener.onResponse(response);
-        } catch (Exception e) {
-            listener.onFailure(e);
-        }
+                    response.setMessage("foo");
+                    listener.onResponse(response);
+                } catch (Exception e) {
+                    listener.onFailure(e);
+                }
+            }
+        });
     }
 }
 
