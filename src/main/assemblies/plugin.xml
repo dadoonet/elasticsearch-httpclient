@@ -11,6 +11,10 @@
             <outputDirectory>elasticsearch</outputDirectory>
             <filtered>true</filtered>
         </file>
+        <file>
+            <source>${project.basedir}/src/main/resources/plugin-security.policy</source>
+            <outputDirectory>elasticsearch</outputDirectory>
+        </file>
     </files>
     <dependencySets>
         <dependencySet>
